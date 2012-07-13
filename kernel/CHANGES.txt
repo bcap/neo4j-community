@@ -1,3 +1,9 @@
+1.8.M06 (2012-07-06)
+--------------------
+o Deprecated AbstractGraphDatabase.transactionRunning()
+o Changed synchronization of applying transactions to prevent a deadlock scenario
+o Original cause can be extracted from a transaction RollbackException
+
 1.8.M05 (2012-06-25)
 --------------------
 o Configurable amount of logical logs to keep, by for example number of days or size on disk.

@@ -1227,6 +1227,8 @@ public class XaLogicalLog implements LogLoader
     public synchronized void applyTransactionWithoutTxId( ReadableByteChannel byteChannel,
             long nextTxId, ForceMode forceMode ) throws IOException
     {
+        int xidIdent = 0;
+        LogEntry.Start startEntry = null;
         if ( nextTxId != (xaTf.getLastCommittedTx() + 1) )
         {
             throw new IllegalStateException( "Tried to apply tx " +
@@ -1240,14 +1242,14 @@ public class XaLogicalLog implements LogLoader
         long logEntriesFound = 0;
         scanIsComplete = false;
         LogDeserializer logApplier = getLogDeserializer( byteChannel );
-        int xidIdent = getNextIdentifier();
+        xidIdent = getNextIdentifier();
         long startEntryPosition = writeBuffer.getFileChannelPosition();
         while ( logApplier.readAndWriteAndApplyEntry( xidIdent ) )
         {
             logEntriesFound++;
         }
         byteChannel.close();
-        LogEntry.Start startEntry = logApplier.getStartEntry();
+        startEntry = logApplier.getStartEntry();
         if ( startEntry == null )
         {
             throw new IOException( "Unable to find start entry" );

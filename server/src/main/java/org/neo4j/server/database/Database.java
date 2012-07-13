@@ -22,13 +22,13 @@ package org.neo4j.server.database;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.neo4j.ext.udc.UdcSettings;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.factory.GraphDatabaseSetting;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.graphdb.index.IndexManager;
 import org.neo4j.graphdb.index.RelationshipIndex;
+import org.neo4j.kernel.AbstractGraphDatabase;
 import org.neo4j.kernel.GraphDatabaseAPI;
 import org.neo4j.kernel.lifecycle.Lifecycle;
 import org.neo4j.server.logging.Logger;
@@ -50,7 +50,7 @@ public class Database implements Lifecycle
      * version 1.10
      */
     @Deprecated
-    public GraphDatabaseAPI graph;
+    public AbstractGraphDatabase graph;
 
     private String databaseStoreDirectory;
     private RrdDb rrdDb;
@@ -59,7 +59,6 @@ public class Database implements Lifecycle
     /**
      * This constructor should not be used, 
      * please use a subclass of this class instead.
-     * @param db
      */
     @Deprecated
     public Database()
@@ -73,7 +72,7 @@ public class Database implements Lifecycle
      * @param db
      */
     @Deprecated
-    public Database( GraphDatabaseAPI db )
+    public Database( AbstractGraphDatabase db )
     {
         this.databaseStoreDirectory = db.getStoreDir();
         graph = db;
@@ -82,12 +81,11 @@ public class Database implements Lifecycle
     /**
      * This constructor should not be used, 
      * please use {@link CommunityDatabase} instead.
-     * @param db
      */
     @Deprecated
     public Database( GraphDatabaseFactory factory, String databaseStoreDirectory )
     {
-        this( createDatabase( factory, databaseStoreDirectory, null ) );
+        this( (AbstractGraphDatabase) createDatabase( factory, databaseStoreDirectory, null ) );
         log.warn(
                 "No database tuning properties set in the property file, using defaults. Please specify the performance properties file with org.neo4j.server.db.tuning.properties in the server properties file [%s].",
                 System.getProperty( "org.neo4j.server.properties" ) );
@@ -96,13 +94,12 @@ public class Database implements Lifecycle
     /**
      * This constructor should not be used, 
      * please use {@link CommunityDatabase} instead.
-     * @param db
      */
     @Deprecated
     public Database( GraphDatabaseFactory factory, String databaseStoreDirectory,
             Map<String, String> databaseTuningProperties )
     {
-        this( createDatabase( factory, databaseStoreDirectory, databaseTuningProperties ) );
+        this( (AbstractGraphDatabase) createDatabase( factory, databaseStoreDirectory, databaseTuningProperties ) );
     }
 
     private static GraphDatabaseAPI createDatabase( GraphDatabaseFactory factory, String databaseStoreDirectory,
@@ -117,7 +114,7 @@ public class Database implements Lifecycle
 
         putIfAbsent( databaseProperties, ShellSettings.remote_shell_enabled.name(), GraphDatabaseSetting.TRUE );
         putIfAbsent( databaseProperties, GraphDatabaseSettings.keep_logical_logs.name(), GraphDatabaseSetting.TRUE );
-        databaseProperties.put( UdcSettings.udc_source.name(), "server" );
+        databaseProperties.put( GraphDatabaseSettings.udc_source.name(), "server" );
 
         return factory.createDatabase( databaseStoreDirectory, databaseProperties );
     }

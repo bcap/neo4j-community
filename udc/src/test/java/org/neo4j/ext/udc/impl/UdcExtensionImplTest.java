@@ -39,10 +39,11 @@ import org.apache.http.localserver.LocalTestServer;
 import org.junit.Before;
 import org.junit.Test;
 import org.neo4j.ext.udc.Edition;
-import org.neo4j.ext.udc.UdcSettings;
+import org.neo4j.ext.udc.UdcConstants;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
 import org.neo4j.graphdb.factory.GraphDatabaseFactory;
+import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.kernel.GraphDatabaseAPI;
 // import org.neo4j.kernel.ha.HaSettings;
 
@@ -114,8 +115,8 @@ public class UdcExtensionImplTest
     {
         GraphDatabaseService graphdb = new GraphDatabaseFactory().
             newEmbeddedDatabaseBuilder( "should-record-failures").
-            setConfig( UdcSettings.first_delay, "100" ).
-            setConfig( UdcSettings.udc_host, "127.0.0.1:1" ).
+            setConfig( GraphDatabaseSettings.first_delay, "100" ).
+            setConfig( GraphDatabaseSettings.udc_host, "127.0.0.1:1" ).
             newGraphDatabase();
         assertGotFailureWithRetry( IS_GREATER_THAN_ZERO );
         destroy( graphdb );
@@ -154,8 +155,8 @@ public class UdcExtensionImplTest
         serverAddress = hostname + ":" + server.getServicePort();
 
         config = new HashMap<String, String>();
-        config.put(UdcSettings.first_delay.name(), "100");
-        config.put(UdcSettings.udc_host.name(), serverAddress);
+        config.put(GraphDatabaseSettings.first_delay.name(), "100");
+        config.put(GraphDatabaseSettings.udc_host.name(), serverAddress);
     }
 
     @Test
@@ -164,7 +165,7 @@ public class UdcExtensionImplTest
 
         setupServer();
 
-        config.put( UdcSettings.udc_registration_key.name(), "marketoid" );
+        config.put( GraphDatabaseSettings.udc_registration_key.name(), "marketoid" );
 
         GraphDatabaseService graphdb = createTempDatabase( config );
         assertGotSuccessWithRetry( IS_GREATER_THAN_ZERO );
@@ -234,6 +235,56 @@ public class UdcExtensionImplTest
         assertNotNull(handler.getQueryMap().get(MAC));
 
         destroy( graphdb );
+    }
+
+    @Test
+    public void shouldIncludePrefixedSystemProperties() throws Exception
+    {
+        setupServer();
+        System.setProperty(UdcConstants.UDC_PROPERTY_PREFIX+".test","udc-property");
+        System.setProperty("os.test","os-property");
+        GraphDatabaseService graphdb = createTempDatabase( config );
+        assertGotSuccessWithRetry( IS_GREATER_THAN_ZERO );
+        assertEquals("udc-property",handler.getQueryMap().get("test"));
+        assertEquals("os-property",handler.getQueryMap().get("os.test"));
+
+        destroy( graphdb );
+    }
+
+    @Test
+    public void shouldNotIncludeDistributionForWindows() throws Exception
+    {
+        setupServer();
+        System.setProperty("os.name","Windows");
+        GraphDatabaseService graphdb = createTempDatabase( config );
+        assertGotSuccessWithRetry( IS_GREATER_THAN_ZERO );
+        assertEquals(UdcConstants.UNKNOWN_DIST,handler.getQueryMap().get("dist"));
+
+        destroy( graphdb );
+    }
+
+    @Test
+    public void shouldIncludeDistributionForLinux() throws Exception
+    {
+        if (!System.getProperty("os.name").equals("Linux")) return;
+        setupServer();
+        GraphDatabaseService graphdb = createTempDatabase( config );
+        assertGotSuccessWithRetry( IS_GREATER_THAN_ZERO );
+
+        assertEquals(UdcInformationCollector.searchForPackageSystems(),handler.getQueryMap().get("dist"));
+
+        destroy( graphdb );
+    }
+    @Test
+    public void shouldNotIncludeDistributionForMacOS() throws Exception
+    {
+        setupServer();
+        System.setProperty("os.name","Mac OS X");
+        GraphDatabaseService graphdb = createTempDatabase( config );
+        assertGotSuccessWithRetry(IS_GREATER_THAN_ZERO);
+        assertEquals(UdcConstants.UNKNOWN_DIST,handler.getQueryMap().get("dist"));
+
+        destroy(graphdb);
     }
 
     @Test
